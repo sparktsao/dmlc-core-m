@@ -304,23 +304,25 @@ size_t CURLReadStreamBase::Read(void *ptr, size_t size) {
   if (at_end_ && expect_file_size_ != 0 &&
       curr_bytes_ != expect_file_size_) {
     int nretry = 0;
+    int sleeptime = 100;
     CHECK_EQ(buffer_.length(), 0);
     while (true) {
-      LOG(ERROR) << "Re-establishing connection to Amazon S3, retry " << nretry;
+      LOG(ERROR) << "Re-establishing connection to Amazon S3, retry " << nretry << " sparksleep " << sleeptime;
+      sleeptime = 100 + 100*(nretry);
       size_t rec_curr_bytes = curr_bytes_;
       this->Cleanup();
       this->Init(rec_curr_bytes);
       if (this->FillBuffer(1) != 0) break;
       ++nretry;
-      CHECK_LT(nretry, 50)
+      CHECK_LT(nretry, 500)
           << "Unable to re-establish connection to read full file"
           << " ,expect_file_size=" << expect_file_size_
           << " ,curr_bytes=" << curr_bytes_;
-      // sleep 100ms
+      // sleep 100ms + nretry/10
 #ifdef _WIN32
-      Sleep(100);
+      Sleep(sleeptime);
 #else
-      struct timeval wait = { 0, 100 * 1000 };
+      struct timeval wait = { 0, sleeptime * 1000 };
       select(0, NULL, NULL, NULL, &wait);
 #endif
     }
@@ -787,6 +789,7 @@ void ListObjects(const URI &path,
   {
     // get files
     XMLIter xml(ret.c_str());
+    LOG(INFO) << ret;
     XMLIter data;
     CHECK(xml.GetNext("IsTruncated", &data)) << "missing IsTruncated";
     CHECK(data.str() == "false") << "the returning list is truncated";

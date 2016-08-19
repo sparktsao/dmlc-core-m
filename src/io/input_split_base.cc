@@ -94,9 +94,14 @@ std::string InputSplitBase::StripEnd(std::string str, char ch) {
 
 void InputSplitBase::InitInputFileInfo(const std::string& uri) {
   // split by :
-  const char dlm = ';';
+  const char dlm = '@'; // change from ; to @ due to will 
   std::vector<std::string> file_list = Split(uri, dlm);
   std::vector<URI> expanded_list;
+
+  // spark
+  for (size_t i = 0; i < file_list.size(); ++i) {
+    LOG(INFO) << file_list[i].c_str() << " @sparkfilelog";
+  }
 
   // expand by match regex pattern.
   for (size_t i = 0; i < file_list.size(); ++i) {
